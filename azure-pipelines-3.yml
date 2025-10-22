@@ -1,0 +1,32 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'windows-latest'  # Uses a Microsoft-hosted Windows agent
+
+variables:
+  resourceGroupName: 'myResourceGroup'
+  location: 'eastus'
+
+stages:
+- stage: CreateResourceGroup
+  displayName: 'Create Resource Group in Azure'
+  jobs:
+  - job: CreateRG
+    displayName: 'Azure CLI Job - Create Resource Group'
+    steps:
+
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'mydevops'  # Replace this with your actual service connection
+        scriptType: 'ps'  # PowerShell script on Windows agent
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Creating resource group: $env:RESOURCEGROUPNAME in $env:LOCATION"
+          az group create `
+            --name $env:RESOURCEGROUPNAME `
+            --location $env:LOCATION
+      env:
+        RESOURCEGROUPNAME: $(resourceGroupName)
+        LOCATION: $(location)
+      displayName: 'Run Azure CLI to Create Resource Group'
