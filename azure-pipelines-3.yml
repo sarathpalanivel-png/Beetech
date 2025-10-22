@@ -30,3 +30,14 @@ stages:
         RESOURCEGROUPNAME: $(resourceGroupName)
         LOCATION: $(location)
       displayName: 'Run Azure CLI to Create Resource Group'
+
+ Write-Host "Creating storage account: devstorage"
+          az storage account create `
+            --name devstorage `
+            --resource-group $env:RESOURCEGROUPNAME `
+            --location $env:LOCATION `
+            --sku Standard_LRS
+      env:
+        RESOURCEGROUPNAME: $(resourceGroupName)
+        LOCATION: $(location)
+      displayName: 'Run Azure CLI to Storage Account'
