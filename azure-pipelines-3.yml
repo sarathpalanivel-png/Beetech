@@ -53,6 +53,6 @@ stages:
     - task: PublishBuildArtifacts@1
       inputs:
         PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-        ArtifactName: '$(artifactName)'
+        ArtifactName: '$(Firstartifact)'
         publishLocation: 'Container'
       displayName: 'Publish Deployment Log as Build Artifact'
