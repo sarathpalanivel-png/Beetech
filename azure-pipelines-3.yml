@@ -7,7 +7,7 @@ pool:
 variables:
   resourceGroupName: 'myResourceGroup'
   location: 'eastus'
-  storageAccountName: 'mystorageacct1234'  # lowercase, unique
+  storageAccountName: 'mydev231025'  # lowercase, unique
   sku: 'Standard_LRS'
   kind: 'StorageV2'
 
