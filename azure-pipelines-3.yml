@@ -2,51 +2,38 @@ trigger:
 - main
 
 pool:
-  vmImage: 'windows-latest'  # Uses a Microsoft-hosted Windows agent
+  vmImage: 'windows-latest'
 
 variables:
   resourceGroupName: 'myResourceGroup'
   location: 'eastus'
+  storageAccountName: 'mystorageacct1234'  # lowercase, unique
+  sku: 'Standard_LRS'
+  kind: 'StorageV2'
 
 stages:
-- stage: CreateResourceGroup
-  displayName: 'Create Resource Group in Azure'
+- stage: CreateStorageAccount
+  displayName: 'Create Azure Storage Account'
   jobs:
-  - job: CreateRG
-    displayName: 'Azure CLI Job - Create Resource Group'
+  - job: CreateStorage
+    displayName: 'Azure CLI Job - Create Storage Account'
     steps:
-
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'mydevops'  # Replace this with your actual service connection
-        scriptType: 'ps'  # PowerShell script on Windows agent
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          Write-Host "Creating resource group: $env:RESOURCEGROUPNAME in $env:LOCATION"
-          az group create `
-            --name $env:RESOURCEGROUPNAME `
-            --location $env:LOCATION
-      env:
-        RESOURCEGROUPNAME: $(resourceGroupName)
-        LOCATION: $(location)
-      displayName: 'Run Azure CLI to Create Resource Group'
-
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: 'mydevops'  # Replace with your actual Azure service connection name
-        scriptType: 'ps'  # PowerShell script
+        azureSubscription: 'mydevops'  # Replace with your actual service connection
+        scriptType: 'ps'
         scriptLocation: 'inlineScript'
         inlineScript: |
           Write-Host "Creating storage account: $env:STORAGEACCOUNTNAME in resource group: $env:RESOURCEGROUPNAME"
-          
-          # Check if resource group exists
+
+          # Check and create resource group if needed
           $rgExists = az group exists --name $env:RESOURCEGROUPNAME
           if ($rgExists -eq 'false') {
             Write-Host "Resource group not found. Creating resource group: $env:RESOURCEGROUPNAME"
             az group create --name $env:RESOURCEGROUPNAME --location $env:LOCATION
           }
 
-          # Create storage account
+          # Create the storage account
           az storage account create `
             --name $env:STORAGEACCOUNTNAME `
             --resource-group $env:RESOURCEGROUPNAME `
