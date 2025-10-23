@@ -31,13 +31,35 @@ stages:
         LOCATION: $(location)
       displayName: 'Run Azure CLI to Create Resource Group'
 
- Write-Host "Creating storage account: devstorage"
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'mydevops'  # Replace with your actual Azure service connection name
+        scriptType: 'ps'  # PowerShell script
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Creating storage account: $env:STORAGEACCOUNTNAME in resource group: $env:RESOURCEGROUPNAME"
+          
+          # Check if resource group exists
+          $rgExists = az group exists --name $env:RESOURCEGROUPNAME
+          if ($rgExists -eq 'false') {
+            Write-Host "Resource group not found. Creating resource group: $env:RESOURCEGROUPNAME"
+            az group create --name $env:RESOURCEGROUPNAME --location $env:LOCATION
+          }
+
+          # Create storage account
           az storage account create `
-            --name devstorage `
+            --name $env:STORAGEACCOUNTNAME `
             --resource-group $env:RESOURCEGROUPNAME `
             --location $env:LOCATION `
-            --sku Standard_LRS
+            --sku $env:SKU `
+            --kind $env:KIND `
+            --allow-blob-public-access false
+
+          Write-Host "✅ Storage account $env:STORAGEACCOUNTNAME created successfully!"
       env:
         RESOURCEGROUPNAME: $(resourceGroupName)
         LOCATION: $(location)
-      displayName: 'Run Azure CLI to Storage Account'
+        STORAGEACCOUNTNAME: $(storageAccountName)
+        SKU: $(sku)
+        KIND: $(kind)
+      displayName: 'Run Azure CLI to Create Storage Account'
