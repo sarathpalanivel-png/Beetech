@@ -50,3 +50,9 @@ stages:
         SKU: $(sku)
         KIND: $(kind)
       displayName: 'Run Azure CLI to Create Storage Account'
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: '$(artifactName)'
+        publishLocation: 'Container'
+      displayName: 'Publish Deployment Log as Build Artifact'
