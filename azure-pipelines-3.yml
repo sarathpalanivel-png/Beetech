@@ -5,78 +5,100 @@ pool:
   vmImage: 'windows-latest'
 
 variables:
+  azureSubscription: 'mydevops'             # Replace with your service connection name
   resourceGroupName: 'myResourceGroup'
   location: 'eastus'
-  storageAccountName: 'mydev231025'  # lowercase, unique
+  storageAccountName: 'mystorageacct1234'
   sku: 'Standard_LRS'
   kind: 'StorageV2'
+  artifactName: 'storage-deployment-artifact'
 
 stages:
-- stage: CreateStorageAccount
-  displayName: 'Create Azure Storage Account'
+- stage: DeployStorage
+  displayName: 'Create Storage Account & Publish Artifact'
   jobs:
+  #-------------------------------------------
+  # JOB 1: CREATE STORAGE ACCOUNT
+  #-------------------------------------------
   - job: CreateStorage
-    displayName: 'Azure CLI Job - Create Storage Account'
+    displayName: 'Job 1 - Create Azure Storage Account'
     steps:
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: 'mydevops'  # Replace with your actual service connection
-        scriptType: 'ps'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          Write-Host "Creating storage account: $env:STORAGEACCOUNTNAME in resource group: $env:RESOURCEGROUPNAME"
+    - checkout: none
 
-          # Check and create resource group if needed
+    - task: AzureCLI@2
+      name: CreateStorageCLI
+      inputs:
+        azureSubscription: $(azureSubscription)
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          $outputDir = "$(Build.ArtifactStagingDirectory)"
+          if (!(Test-Path $outputDir)) { New-Item -ItemType Directory -Path $outputDir | Out-Null }
+
+          $logPath = "$outputDir\storage_creation_log.txt"
+          $keyPath = "$outputDir\storage_connection_info.txt"
+
+          Write-Host "Creating storage account: $env:STORAGEACCOUNTNAME"
+          Write-Host "Logs: $logPath"
+
           $rgExists = az group exists --name $env:RESOURCEGROUPNAME
           if ($rgExists -eq 'false') {
-            Write-Host "Resource group not found. Creating resource group: $env:RESOURCEGROUPNAME"
-            az group create --name $env:RESOURCEGROUPNAME --location $env:LOCATION
+            Write-Host "Creating resource group: $env:RESOURCEGROUPNAME"
+            az group create --name $env:RESOURCEGROUPNAME --location $env:LOCATION | Out-File -Append $logPath
           }
 
-          # Create the storage account
           az storage account create `
             --name $env:STORAGEACCOUNTNAME `
             --resource-group $env:RESOURCEGROUPNAME `
             --location $env:LOCATION `
             --sku $env:SKU `
             --kind $env:KIND `
-            --allow-blob-public-access false
+            --allow-blob-public-access false | Out-File -Append $logPath
+
+          $connectionString = az storage account show-connection-string `
+            --name $env:STORAGEACCOUNTNAME `
+            --resource-group $env:RESOURCEGROUPNAME `
+            --query connectionString -o tsv
+
+          "Storage Account Name : $env:STORAGEACCOUNTNAME" | Out-File -FilePath $keyPath
+          "Resource Group      : $env:RESOURCEGROUPNAME" | Out-File -Append $keyPath
+          "Location            : $env:LOCATION" | Out-File -Append $keyPath
+          "Connection String   : $connectionString" | Out-File -Append $keyPath
 
           Write-Host "✅ Storage account $env:STORAGEACCOUNTNAME created successfully!"
+
       env:
         RESOURCEGROUPNAME: $(resourceGroupName)
         LOCATION: $(location)
         STORAGEACCOUNTNAME: $(storageAccountName)
         SKU: $(sku)
         KIND: $(kind)
-      displayName: 'Run Azure CLI to Create Storage Account'
-    - task: PublishBuildArtifacts@1
-      inputs:
-        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-        ArtifactName: '$(artifactName)'
-        publishLocation: 'Container'
-      displayName: 'Publish Deployment Log as Build Artifact'
+
+    # ✅ Publish artifact correctly
+    - publish: '$(Build.ArtifactStagingDirectory)'
+      artifact: 'storage-job-output'
+
+  #-------------------------------------------
+  # JOB 2: BUILD & PUBLISH ARTIFACT
+  #-------------------------------------------
   - job: BuildArtifact
     displayName: 'Job 2 - Build & Publish Artifact'
     dependsOn: CreateStorage
     steps:
     - checkout: none
 
-    # Download artifacts from Job 1
+    # ✅ Correct download syntax
     - download: current
       artifact: storage-job-output
 
-    # Optional: verify contents
     - script: |
         echo "Listing files from previous job artifact:"
         dir "$(Pipeline.Workspace)\storage-job-output"
       displayName: 'Verify Artifact Contents'
 
-    # Publish as Build Artifact
     - task: PublishBuildArtifacts@1
-      displayName: 'Publish Storage Account Logs as Build Artifact'
+      displayName: 'Publish Final Build Artifact'
       inputs:
         PathtoPublish: '$(Pipeline.Workspace)\storage-job-output'
         ArtifactName: '$(artifactName)'
         publishLocation: 'Container'
-
