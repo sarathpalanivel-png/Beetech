@@ -8,7 +8,7 @@ variables:
   azureSubscription: 'mydevops'             # Replace with your service connection name
   resourceGroupName: 'myResourceGroup'
   location: 'eastus'
-  storageAccountName: 'mystorageacct1234'
+  storageAccountName: 'mystorageacct281025'
   sku: 'Standard_LRS'
   kind: 'StorageV2'
   artifactName: 'storage-deployment-artifact'
