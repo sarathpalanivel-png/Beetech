@@ -56,3 +56,27 @@ stages:
         ArtifactName: '$(artifactName)'
         publishLocation: 'Container'
       displayName: 'Publish Deployment Log as Build Artifact'
+  - job: BuildArtifact
+    displayName: 'Job 2 - Build & Publish Artifact'
+    dependsOn: CreateStorage
+    steps:
+    - checkout: none
+
+    # Download artifacts from Job 1
+    - download: current
+      artifact: storage-job-output
+
+    # Optional: verify contents
+    - script: |
+        echo "Listing files from previous job artifact:"
+        dir "$(Pipeline.Workspace)\storage-job-output"
+      displayName: 'Verify Artifact Contents'
+
+    # Publish as Build Artifact
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Storage Account Logs as Build Artifact'
+      inputs:
+        PathtoPublish: '$(Pipeline.Workspace)\storage-job-output'
+        ArtifactName: '$(artifactName)'
+        publishLocation: 'Container'
+
